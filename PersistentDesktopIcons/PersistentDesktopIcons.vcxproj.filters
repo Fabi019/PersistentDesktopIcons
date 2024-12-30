@@ -27,9 +27,15 @@
     <ClInclude Include="PersistentDesktopIcons.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="IconManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PersistentDesktopIcons.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="IconManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

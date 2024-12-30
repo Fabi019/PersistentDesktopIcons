@@ -128,11 +128,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
+    <ClInclude Include="IconManager.h" />
     <ClInclude Include="PersistentDesktopIcons.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="IconManager.cpp" />
     <ClCompile Include="PersistentDesktopIcons.cpp" />
   </ItemGroup>
   <ItemGroup>
