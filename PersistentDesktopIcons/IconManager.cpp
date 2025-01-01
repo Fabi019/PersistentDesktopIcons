@@ -2,7 +2,7 @@
 
 IconManager::IconManager() {
     HWND desktop = NULL;
-    EnumWindows(IconManager::FindShellDefView, reinterpret_cast<LPARAM>(&desktop));
+    EnumWindows(IconManager::FindShellDefView, (LPARAM)&desktop);
 
     listView = FindWindowEx(desktop, NULL, L"SysListView32", NULL);
 
@@ -38,7 +38,8 @@ bool IconManager::GetIconInfo(int index, IconManager::IconInfo& info) {
     item.pszText = (LPTSTR)remoteText;
 
     WriteProcessMemory(explorer, remoteData, &item, sizeof(LVITEM), NULL);
-    if (SendMessage(listView, LVM_GETITEMTEXT, index, (LPARAM)remoteData) < 0) {
+
+    if (SendMessage(listView, LVM_GETITEMTEXT, index, (LPARAM)remoteData) <= 0) {
         return false;
     }
 
@@ -51,51 +52,60 @@ bool IconManager::Export(const TCHAR* filePath) {
     IconManager::IconInfo info{};
     TCHAR buffer[_MAX_U64TOSTR_BASE10_COUNT]{};
 
+    BOOL success = true;
+
     for (int i = 0; i < GetIconCount(); ++i) {
         if (!GetIconInfo(i, info)) {
+            success = false;
             continue;
         }
 
         _ltot_s(info.position.x, buffer, 10);
-        WritePrivateProfileString(info.text, L"X", buffer, filePath);
+        success |= WritePrivateProfileString(info.text, L"X", buffer, filePath);
 
         _ltot_s(info.position.y, buffer, 10);
-        WritePrivateProfileString(info.text, L"Y", buffer, filePath);
+        success |= WritePrivateProfileString(info.text, L"Y", buffer, filePath);
     }
 
-    return true;
+    return success;
 }
 
-bool IconManager::Import(const TCHAR* filePath) {
-    const int bufferSize = 1024;
-    TCHAR buffer[bufferSize]{};
+bool IconManager::Import(const TCHAR* filePath, IProgressDialog* progress) {
+    const auto total = GetIconCount();
+    const auto style = ListView_GetExtendedListViewStyle(listView);
 
-    if (GetPrivateProfileSectionNames(buffer, bufferSize, filePath) <= 0) {
-        return false;
-    }
+    // Disables snap to grid
+    ListView_SetExtendedListViewStyleEx(listView, LVS_EX_SNAPTOGRID, 0);
 
-    TCHAR* section = buffer;
-    while (*section) {
-        auto x = GetPrivateProfileInt(section, _T("X"), MAXUINT, filePath);
-        auto y = GetPrivateProfileInt(section, _T("Y"), MAXUINT, filePath);
-
-        if (x == MAXUINT || y == MAXUINT) {
+    IconManager::IconInfo info{};
+    for (int i = 0; i < total; ++i) {
+        if (!GetIconInfo(i, info) || info.text == NULL) {
             continue;
         }
 
-        IconManager::IconInfo info{};
-        for (int i = 0; i < GetIconCount(); ++i) {
-            if (!GetIconInfo(i, info) || info.text == NULL) {
-                continue;
+        if (progress)
+        {
+            if (progress->HasUserCancelled())
+            {
+                break;
             }
 
-            if (_tcscmp(info.text, section) == 0) {
-                SetIconPosition(i, x, y);
-            }
+            progress->SetProgress(i, total);
+            progress->SetLine(2, info.text, false, NULL);
         }
 
-        section += _tcsclen(section) + 1;
+        auto x = GetPrivateProfileInt(info.text, _T("X"), -1, filePath);
+        auto y = GetPrivateProfileInt(info.text, _T("Y"), -1, filePath);
+
+        if (x == -1 || y == -1) {
+            continue;
+        }
+
+        SetIconPosition(i, x, y);
     }
+
+    // Restore original style
+    ListView_SetExtendedListViewStyle(listView, style);
 
     return true;
 }

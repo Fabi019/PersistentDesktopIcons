@@ -5,20 +5,33 @@
 #include "PersistentDesktopIcons.h"
 #include "IconManager.h"
 
-#define MAX_LOADSTRING 100
-
 // Global Variables:
 HINSTANCE hInst;                                // current instance
-TCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-TCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-
 IconManager* g_icm;
+IProgressDialog* pProgressDialog;
 
 // Forward declarations of functions included in this code module:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+
+int __stdcall wWinMainCRTStartup()
+{
+#if defined(_WIN32)
+    typedef BOOL(WINAPI* LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
+
+    LPFN_ISWOW64PROCESS isWow64;
+    BOOL bIsWow64 = FALSE;
+
+    isWow64 = (LPFN_ISWOW64PROCESS)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
+    if (isWow64 != NULL && isWow64(GetCurrentProcess(), &bIsWow64) && bIsWow64)
+    {
+        MessageBox(NULL, _T("This application only works when executed in the native architecture! Please use the 64bit version."), _T("Error"), MB_OK | MB_ICONERROR);
+        return 0;
+    }
+#endif
+
+    return wWinMain(GetModuleHandle(NULL), 0, 0, 0);
+}
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -28,135 +41,64 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: Place code here.
-    InitCommonControls();
-    INITCOMMONCONTROLSEX icex{};
-    icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
-    icex.dwICC = ICC_USEREX_CLASSES;
-    InitCommonControlsEx(&icex);
-
     IconManager mgr{};
     g_icm = &mgr;
 
-    // Initialize global strings
-    //LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    //LoadStringW(hInstance, IDC_PERSISTENTDESKTOPICONS, szWindowClass, MAX_LOADSTRING);
-    //MyRegisterClass(hInstance);
-
-    // Perform application initialization:
-    //if (!InitInstance(hInstance, nCmdShow))
-    //{
-    //    return FALSE;
-    //}
-    
-    return DialogBox(hInst, MAKEINTRESOURCE(IDD_MAIN_DIALOG), NULL, WndProc);
-
-    //HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_PERSISTENTDESKTOPICONS));
-
-    //MSG msg;
-
-    //// Main message loop:
-    //while (GetMessage(&msg, nullptr, 0, 0))
-    //{
-    //    if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-    //    {
-    //        TranslateMessage(&msg);
-    //        DispatchMessage(&msg);
-    //    }
-    //}
-
-    //g_icm = nullptr;
-
-    //return (int) msg.wParam;
-}
-
-
-
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
-ATOM MyRegisterClass(HINSTANCE hInstance)
-{
-    WNDCLASSEXW wcex;
-
-    wcex.cbSize = sizeof(WNDCLASSEX);
-
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_PERSISTENTDESKTOPICONS));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_PERSISTENTDESKTOPICONS);
-    wcex.lpszClassName  = szWindowClass;
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
-
-    return RegisterClassExW(&wcex);
-}
-
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
-{
-   hInst = hInstance; // Store instance handle in our global variable
-
-   HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW/* & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME*/,
-      CW_USEDEFAULT, CW_USEDEFAULT, 300, 200, nullptr, nullptr, hInstance, nullptr);
-
-   if (!hWnd)
-   {
-      return FALSE;
-   }
-
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
-
-   return TRUE;
+    hInst = hInstance;
+    return (int) DialogBox(hInst, MAKEINTRESOURCE(IDD_MAIN_DIALOG), NULL, WndProc);
 }
 
 static void LoadFile(TCHAR* fileName = nullptr) {
-    if (fileName != nullptr) {
-        g_icm->Import(fileName);
-        return;
+    if (pProgressDialog)
+    {
+        pProgressDialog->StartProgressDialog(NULL, NULL, PROGDLG_NORMAL, NULL);
+        pProgressDialog->SetTitle(_T("Moving Desktop icons"));
+        pProgressDialog->SetLine(1, _T("Processing..."), false, NULL);
     }
 
-    OPENFILENAME ofn;
-    TCHAR szFile[MAX_PATH]{};
-
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = NULL;
-    ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = _T("INI Files\0*.INI\0All Files\0*.*\0");  // Filter for INI files
-    ofn.nFilterIndex = 1;
-    ofn.lpstrFileTitle = NULL;
-    ofn.nMaxFileTitle = 0;
-    ofn.lpstrInitialDir = NULL;
-    ofn.lpstrTitle = _T("Load");
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
-    if (GetOpenFileName(&ofn) == TRUE)
+    if (fileName != nullptr && !g_icm->Import(fileName, pProgressDialog))
     {
-        g_icm->Import(ofn.lpstrFile);
+        MessageBox(NULL, _T("The selected file could not be applied!"), _T("Error"), MB_OK | MB_ICONERROR);
+    }
+    else if (fileName == nullptr)
+    {
+        OPENFILENAME ofn;
+        TCHAR szFile[MAX_PATH]{};
+
+        ZeroMemory(&ofn, sizeof(ofn));
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = NULL;
+        ofn.lpstrFile = szFile;
+        ofn.nMaxFile = sizeof(szFile);
+        ofn.lpstrFilter = _T("Desktop Files\0*.desktop\0All Files\0*.*\0");  // Filter for INI files
+        ofn.nFilterIndex = 1;
+        ofn.lpstrFileTitle = NULL;
+        ofn.nMaxFileTitle = 0;
+        ofn.lpstrInitialDir = NULL;
+        ofn.lpstrTitle = _T("Load");
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+        if (GetOpenFileName(&ofn) == TRUE && !g_icm->Import(ofn.lpstrFile, pProgressDialog))
+        {
+            MessageBox(NULL, _T("The selected file could not be applied!"), _T("Error"), MB_OK | MB_ICONERROR);
+        }
+    }
+
+    if (pProgressDialog)
+    {
+        pProgressDialog->StopProgressDialog();
+        pProgressDialog->Release();
+        
+        // Create new instance for next operation
+        auto _ = CoCreateInstance(CLSID_ProgressDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pProgressDialog));
     }
 }
 
 static void SaveFile(TCHAR* fileName = nullptr) {
     if (fileName != nullptr) {
-        g_icm->Export(fileName);
+        if (!g_icm->Export(fileName)) {
+            MessageBox(NULL, _T("An error occured while exporting the current file!"), _T("Error"), MB_OK | MB_ICONERROR);
+        }
         return;
     }
 
@@ -168,7 +110,7 @@ static void SaveFile(TCHAR* fileName = nullptr) {
     ofn.hwndOwner = NULL;
     ofn.lpstrFile = szFile;
     ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = _T("INI Files\0*.INI\0All Files\0*.*\0");  // Filter for INI files
+    ofn.lpstrFilter = _T("Desktop Files\0*.desktop\0All Files\0*.*\0");  // Filter for INI files
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = NULL;
     ofn.nMaxFileTitle = 0;
@@ -176,9 +118,9 @@ static void SaveFile(TCHAR* fileName = nullptr) {
     ofn.lpstrTitle = _T("Save");
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;
 
-    if (GetSaveFileName(&ofn) == TRUE)
+    if (GetSaveFileName(&ofn) == TRUE && !g_icm->Export(ofn.lpstrFile))
     {
-        g_icm->Export(ofn.lpstrFile);
+        MessageBox(NULL, _T("An error occured while exporting the current file!"), _T("Error"), MB_OK | MB_ICONERROR);
     }
 }
 
@@ -192,27 +134,79 @@ static void SaveFile(TCHAR* fileName = nullptr) {
 //  WM_DESTROY  - post a quit message and return
 //
 //
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
     case WM_INITDIALOG:
     {   
+        auto hr = CoInitialize(NULL);
+        hr |= CoCreateInstance(CLSID_ProgressDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pProgressDialog));
+        if (FAILED(hr))
+        {
+            CoUninitialize();
+        }
+
+        //IShellWindows* pShellWindows;
+        //hr = CoCreateInstance(CLSID_ShellWindows, NULL, CLSCTX_LOCAL_SERVER, IID_PPV_ARGS(&pShellWindows));
+
+        //long lhwnd;
+        //VARIANT loc{ CSIDL_DESKTOP };
+        //VariantInit(&loc);
+        //VARIANT empty{};
+        //VariantInit(&empty);
+        //IDispatch* pDisp;
+        //hr = pShellWindows->FindWindowSW(&loc, &empty, SWC_DESKTOP, &lhwnd, SWFO_NEEDDISPATCH, &pDisp);
+
+        //IServiceProvider* pService;
+        //pDisp->QueryInterface(IID_PPV_ARGS(&pService));
+
+        //IShellBrowser* pBrowser;
+        //pService->QueryService(SID_STopLevelBrowser, IID_PPV_ARGS(&pBrowser));
+
+        //IShellView* pView;
+        //pBrowser->QueryActiveShellView(&pView);
+
+        //IFolderView* pFolderView;
+        //pView->QueryInterface(IID_PPV_ARGS(&pFolderView));
+
+        //IShellFolder* pFolder;
+        //pFolderView->GetFolder(IID_PPV_ARGS(&pFolder));
+
+        //IEnumIDList* pEnum;
+        //pFolderView->Items(SVGIO_ALLVIEW, IID_PPV_ARGS(&pEnum));
+
+        //for (ITEMID_CHILD* pIdl; pEnum->Next(1, &pIdl, nullptr) == S_OK; CoTaskMemFree(pIdl)) {
+        //    STRRET str;
+        //    pFolder->GetDisplayNameOf(pIdl, SHGDN_NORMAL, &str);
+
+        //    wchar_t* spszName;
+        //    StrRetToStr(&str, pIdl, &spszName);
+
+        //    OutputDebugString(spszName);
+        //    OutputDebugString(_T("\n"));
+
+        //    POINT pt;
+        //    pFolderView->GetItemPosition(pIdl, &pt);
+        //}
+
+        auto hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ICON));
+        SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+
         HWND comboBox = GetDlgItem(hWnd, IDC_COMBO);
-            
-        ComboBox_AddString(comboBox, _T("(New)"));
-        ComboBox_SetCurSel(comboBox, 0);
 
         WIN32_FIND_DATA findFileData;
-        HANDLE hFind = FindFirstFile(_T("*.ini"), &findFileData);
+        HANDLE hFind = FindFirstFile(_T("*.desktop"), &findFileData);
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
                 ComboBox_AddString(comboBox, findFileData.cFileName);
-            } while (FindNextFile(hFind, &findFileData) != 0);
+            } while (FindNextFile(hFind, &findFileData) != NULL);
             FindClose(hFind);
+
+            ComboBox_SetCurSel(comboBox, 0);
         }
-               
-        break;
+        
+        return TRUE;
     }
     case WM_COMMAND:
     {
@@ -233,30 +227,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case IDC_SAVE:
         {
             HWND comboBox = GetDlgItem(hWnd, IDC_COMBO);
-            auto sel = ComboBox_GetCurSel(comboBox);
-            if (sel == 0) {
-                SaveFile();
-                break;
-            }
             
             TCHAR text[MAX_PATH];
             ComboBox_GetText(comboBox, text, MAX_PATH);
 
-            TCHAR path[MAX_PATH];
-            _tfullpath(path, text, MAX_PATH);
+            auto absPath = _tfullpath(NULL, text, MAX_PATH);
 
             if (wmId == IDC_RESTORE) 
             {
                 auto result = MessageBox(hWnd, _T("This will apply the selected profile onto your desktop."), _T("Confirm"), MB_OKCANCEL | MB_ICONWARNING);
                 if (result == IDOK) {
-                    LoadFile(path);
+                    LoadFile(absPath);
                 }
             }
             else if (wmId == IDC_SAVE)
             {
                 auto result = MessageBox(hWnd, _T("This will override the selected profile."), _T("Confirm"), MB_OKCANCEL | MB_ICONWARNING);
                 if (result == IDOK) {
-                    SaveFile(path);
+                    SaveFile(absPath);
                 }
             }
 
@@ -265,32 +253,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case IDM_EXIT:
         case IDOK:
         case IDCANCEL:
+            CoUninitialize();
             EndDialog(hWnd, wmId);
             return TRUE;
         }
 
-        if (HIWORD(wParam) == CBN_SELCHANGE) {
-            int index = ComboBox_GetCurSel((HWND)lParam);
-            EnableWindow(GetDlgItem(hWnd, IDC_RESTORE), index != 0);
-        }
-
         break;
     }
-   // case WM_PAINT:
-       // {
-            //PAINTSTRUCT ps;
-            //HDC hdc = BeginPaint(hWnd, &ps);
-            //// TODO: Add any drawing code that uses hdc here...
-            //EndPaint(hWnd, &ps);
-       // }
-        //break;
-    //case WM_DESTROY:
-    //    PostQuitMessage(0);
-    //    break;
-    //default:
-    //    return DefWindowProc(hWnd, message, wParam, lParam);
     }
-    return 0;
+    return FALSE;
 }
 
 // Message handler for about box.

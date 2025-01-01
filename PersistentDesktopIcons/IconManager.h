@@ -38,12 +38,13 @@ public:
 
     bool Export(const TCHAR* filePath);
 
-    bool Import(const TCHAR* filePath);
+    bool Import(const TCHAR* filePath, IProgressDialog* progress = nullptr);
 
     static BOOL CALLBACK FindShellDefView(HWND child, LPARAM lparam)
     {
         TCHAR name[MAX_PATH];
         GetClassName(child, name, MAX_PATH);
+
         if (_tcscmp(name, _T("WorkerW")) == 0 || _tcscmp(name, _T("Progman")) == 0) {
             HWND defView = FindWindowEx(child, NULL, _T("SHELLDLL_DefView"), NULL);
             
