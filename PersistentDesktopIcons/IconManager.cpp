@@ -54,8 +54,10 @@ bool IconManager::Export(const TCHAR* filePath) {
 
     BOOL success = true;
 
-    for (int i = 0; i < GetIconCount(); ++i) {
-        if (!GetIconInfo(i, info)) {
+    for (int i = 0; i < GetIconCount(); ++i)
+    {
+        if (!GetIconInfo(i, info)) 
+        {
             success = false;
             continue;
         }
@@ -70,23 +72,23 @@ bool IconManager::Export(const TCHAR* filePath) {
     return success;
 }
 
-bool IconManager::Import(const TCHAR* filePath, IProgressDialog* progress) {
+bool IconManager::Import(const TCHAR* filePath, IProgressDialog* progress, int offsetX, int offsetY, bool alignAfter) {
     const auto total = GetIconCount();
     const auto style = ListView_GetExtendedListViewStyle(listView);
 
-    // Disables snap to grid
+    // Disable snap to grid while moving icons
     ListView_SetExtendedListViewStyleEx(listView, LVS_EX_SNAPTOGRID, 0);
 
     IconManager::IconInfo info{};
-    for (int i = 0; i < total; ++i) {
+    for (int i = 0; i < total; ++i)
+    {
         if (!GetIconInfo(i, info) || info.text == NULL) {
             continue;
         }
 
         if (progress)
         {
-            if (progress->HasUserCancelled())
-            {
+            if (progress->HasUserCancelled()) {
                 break;
             }
 
@@ -94,18 +96,21 @@ bool IconManager::Import(const TCHAR* filePath, IProgressDialog* progress) {
             progress->SetLine(2, info.text, false, NULL);
         }
 
-        auto x = GetPrivateProfileInt(info.text, _T("X"), -1, filePath);
-        auto y = GetPrivateProfileInt(info.text, _T("Y"), -1, filePath);
+        auto x = GetPrivateProfileInt(info.text, _T("X"), 2147483647, filePath);
+        auto y = GetPrivateProfileInt(info.text, _T("Y"), 2147483647, filePath);
 
-        if (x == -1 || y == -1) {
+        if (x == 2147483647 || y == 2147483647) {
             continue;
         }
 
-        SetIconPosition(i, x, y);
+        SetIconPosition(i, x + offsetX, y + offsetY);
     }
 
     // Restore original style
     ListView_SetExtendedListViewStyle(listView, style);
+    if (alignAfter) {
+        ListView_Arrange(listView, LVA_SNAPTOGRID);
+    }
 
     return true;
 }

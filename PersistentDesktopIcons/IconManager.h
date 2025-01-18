@@ -38,7 +38,7 @@ public:
 
     bool Export(const TCHAR* filePath);
 
-    bool Import(const TCHAR* filePath, IProgressDialog* progress = nullptr);
+    bool Import(const TCHAR* filePath, IProgressDialog* progress = nullptr, int offsetX = 0, int offsetY = 0, bool alignAfter = true);
 
     static BOOL CALLBACK FindShellDefView(HWND child, LPARAM lparam)
     {
