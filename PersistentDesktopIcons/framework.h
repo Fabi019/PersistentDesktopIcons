@@ -26,3 +26,4 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #include <shlobj_core.h>
 #include <shlobj.h>
 #include <windowsx.h>
+#include <shellapi.h>
