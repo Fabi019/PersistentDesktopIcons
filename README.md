@@ -6,9 +6,12 @@ Positions of desktop icons are stored in a INI file with the program name as the
 Icons where no position is stored in the file are not touched.
 
 ![Application interface](ui.png)
+
 ***___Application interface___***
 
 While restoring, the snap to grid feature is temporarily disabled to better move the icons around without them getting moved around when two are at the same position.
+
+The latest version can be taken directly from the build pipeline artifacts.
 
 ## How it works
 
