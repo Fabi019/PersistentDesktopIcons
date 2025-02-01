@@ -4,7 +4,7 @@ IconManager::IconManager() {
     HWND desktop = NULL;
     EnumWindows(IconManager::FindShellDefView, (LPARAM)&desktop);
 
-    listView = FindWindowEx(desktop, NULL, L"SysListView32", NULL);
+    listView = FindWindowEx(desktop, NULL, _T("SysListView32"), NULL);
 
     DWORD pid = NULL;
     GetWindowThreadProcessId(listView, &pid);
@@ -63,10 +63,10 @@ bool IconManager::Export(const TCHAR* filePath) {
         }
 
         _ltot_s(info.position.x, buffer, 10);
-        success |= WritePrivateProfileString(info.text, L"X", buffer, filePath);
+        success |= WritePrivateProfileString(info.text, _T("X"), buffer, filePath);
 
         _ltot_s(info.position.y, buffer, 10);
-        success |= WritePrivateProfileString(info.text, L"Y", buffer, filePath);
+        success |= WritePrivateProfileString(info.text, _T("Y"), buffer, filePath);
     }
 
     return success;
@@ -93,7 +93,14 @@ bool IconManager::Import(const TCHAR* filePath, IProgressDialog* progress, int o
             }
 
             progress->SetProgress(i, total);
+
+#ifndef _UNICODE
+            wchar_t buffer[MAX_PATH];
+            MultiByteToWideChar(CP_UTF8, 0, info.text, -1, buffer, MAX_PATH);
+            progress->SetLine(2, buffer, false, NULL);
+#else
             progress->SetLine(2, info.text, false, NULL);
+#endif // !UNICODE
         }
 
         auto x = GetPrivateProfileInt(info.text, _T("X"), 2147483647, filePath);
