@@ -10,48 +10,65 @@ HINSTANCE hInst;                                // current instance
 IconManager* g_icm;
 IProgressDialog* pProgressDialog;
 
-// Forward declarations of functions included in this code module:
-INT_PTR CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-
-int __stdcall wWinMainCRTStartup()
-{
-#if defined(_WIN32)
-    typedef BOOL(WINAPI* LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
-
-    LPFN_ISWOW64PROCESS isWow64;
-    BOOL bIsWow64 = FALSE;
-
-    isWow64 = (LPFN_ISWOW64PROCESS)GetProcAddress(GetModuleHandle(_T("kernel32")), "IsWow64Process");
-    if (isWow64 != NULL && isWow64(GetCurrentProcess(), &bIsWow64) && bIsWow64)
-    {
-        MessageBox(NULL, _T("This application only works when executed in the native architecture! Please use the 64bit version."), _T("Error"), MB_OK | MB_ICONERROR);
-        return 0;
-    }
-#endif
-
-    return wWinMain(GetModuleHandle(NULL), 0, 0, 0);
-}
-
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
+                     _In_ LPTSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
+    UNREFERENCED_PARAMETER(nCmdShow);
 
+    // Initialize icon manager
     IconManager mgr{};
     g_icm = &mgr;
+
+    TCHAR argumentBuffer[5][MAX_PATH];
+    int argc = ParseCommandLine(lpCmdLine, argumentBuffer, 5);
+    OutputDebugString(lpCmdLine);
+    
+    // Check for command line arguments
+    if (argc > 0)
+    {
+        TCHAR* option = argumentBuffer[0];
+        
+        if (argc > 1 && _tcscmp(option, _T("load")) == 0)
+        {
+            int offsetX = 0, offsetY = 0;
+            bool align = false;
+
+            if (argc > 2) offsetX = _tstoi(argumentBuffer[2]);
+            if (argc > 3) offsetY = _tstoi(argumentBuffer[3]);
+            if (argc > 4) align = !!_tstoi(argumentBuffer[4]);
+
+            LoadFile(argumentBuffer[1], offsetX, offsetY, align);
+        }
+        else if (argc > 1 && _tcscmp(option, _T("save")) == 0)
+        {
+            SaveFile(argumentBuffer[1]);
+        }
+        else
+        {
+            MessageBox(NULL, _T("Usage: <load|save> <filename> [offsetX] [offsetY] [align]"), _T("Arguments"), MB_ICONINFORMATION);
+        }
+        
+        return 0;
+    }
 
     hInst = hInstance;
     return (int) DialogBox(hInst, MAKEINTRESOURCE(IDD_MAIN_DIALOG), NULL, WndProc);
 }
 
-static void LoadFile(TCHAR* fileName, int offsetX = 0, int offsetY = 0, bool alignAfter = false) {
+static void LoadFile(TCHAR* fileName, int offsetX, int offsetY, bool alignAfter) {
+    if (!PathFileExists(fileName))
+    {
+        MessageBox(NULL, _T("The file does not exist!"), _T("Error"), MB_OK | MB_ICONERROR);
+        return;
+    }
+
     if (pProgressDialog)
     {
-        pProgressDialog->SetTitle(_T("Moving Desktop icons"));
-        pProgressDialog->SetLine(1, _T("Processing..."), false, NULL);
+        pProgressDialog->SetTitle(L"Moving Desktop icons");
+        pProgressDialog->SetLine(1, L"Processing...", false, NULL);
         pProgressDialog->StartProgressDialog(NULL, NULL, PROGDLG_AUTOTIME, NULL);
     }
 
@@ -99,7 +116,8 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         return (INT_PTR)COLOR_WINDOWFRAME;
     }
-    case WM_ERASEBKGND: {
+    case WM_ERASEBKGND:
+    {
         HDC hdc = (HDC)wParam;
         RECT rect;
         GetClientRect(hWnd, &rect);
