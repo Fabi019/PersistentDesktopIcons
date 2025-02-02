@@ -50,7 +50,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
         {
             MessageBox(NULL, _T("Usage: <load|save> <filename> [offsetX] [offsetY] [align]"), _T("Arguments"), MB_ICONINFORMATION);
         }
-        
+
         return 0;
     }
 
@@ -58,7 +58,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
     return (int) DialogBox(hInst, MAKEINTRESOURCE(IDD_MAIN_DIALOG), NULL, WndProc);
 }
 
-static void LoadFile(TCHAR* fileName, int offsetX, int offsetY, bool alignAfter) {
+static void LoadFile(const LPTSTR fileName, int offsetX, int offsetY, bool alignAfter) {
     if (!PathFileExists(fileName))
     {
         MessageBox(NULL, _T("The file does not exist!"), _T("Error"), MB_OK | MB_ICONERROR);
@@ -83,11 +83,11 @@ static void LoadFile(TCHAR* fileName, int offsetX, int offsetY, bool alignAfter)
         pProgressDialog->Release();
         
         // Create new instance for next operation
-        auto _ = CoCreateInstance(CLSID_ProgressDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pProgressDialog));
+        CoCreateInstance(CLSID_ProgressDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pProgressDialog));
     }
 }
 
-static void SaveFile(TCHAR* fileName) {
+static void SaveFile(const LPTSTR fileName) {
     if (fileName != nullptr) {
         if (!g_icm->Export(fileName)) {
             MessageBox(NULL, _T("An error occured while exporting the current file!"), _T("Error"), MB_OK | MB_ICONERROR);

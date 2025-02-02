@@ -36,9 +36,9 @@ public:
 
     bool SetIconPosition(int index, long x, long y);
 
-    bool Export(const TCHAR* filePath);
+    bool Export(const LPTSTR filePath);
 
-    bool Import(const TCHAR* filePath, IProgressDialog* progress = nullptr, int offsetX = 0, int offsetY = 0, bool alignAfter = true);
+    bool Import(const LPTSTR filePath, IProgressDialog* progress = nullptr, int offsetX = 0, int offsetY = 0, bool alignAfter = true);
 
     static BOOL CALLBACK FindShellDefView(HWND child, LPARAM lparam)
     {

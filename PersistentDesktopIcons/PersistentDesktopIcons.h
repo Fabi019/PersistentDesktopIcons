@@ -7,7 +7,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPTSTR, _In_ int
 
 int __stdcall wWinMainCRTStartup()
 {
-#ifdef _WIN32
+#ifndef _WIN64
     typedef BOOL(WINAPI* LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
 
     LPFN_ISWOW64PROCESS isWow64;
@@ -19,15 +19,15 @@ int __stdcall wWinMainCRTStartup()
         MessageBox(NULL, _T("This application only works when executed in the native architecture! Please use the 64bit version."), _T("Error"), MB_OK | MB_ICONERROR);
         return 0;
     }
-#endif // _WIN32
+#endif // !_WIN64
 
     return _tWinMain(GetModuleHandle(NULL), 0, PathGetArgs(GetCommandLine()), 0);
 }
 
-static void LoadFile(TCHAR* fileName, int offsetX = 0, int offsetY = 0, bool alignAfter = false);
-static void SaveFile(TCHAR* fileName);
+static void LoadFile(const LPTSTR fileName, int offsetX = 0, int offsetY = 0, bool alignAfter = false);
+static void SaveFile(const LPTSTR fileName);
 
-static int ParseCommandLine(const TCHAR* lpCmdLine, TCHAR arguments[][MAX_PATH], int max_args) {
+static int ParseCommandLine(const LPTSTR lpCmdLine, TCHAR arguments[][MAX_PATH], int max_args) {
     int argIndex = 0;
     int charIndex = 0;
 

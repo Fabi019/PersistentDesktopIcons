@@ -13,7 +13,7 @@ IconManager::IconManager() {
 
     // Memory allocated within the explorer process
     remoteData = VirtualAllocEx(explorer, NULL, max(sizeof(LVITEM), sizeof(POINT)), MEM_COMMIT, PAGE_READWRITE);
-    remoteText = static_cast<TCHAR*>(VirtualAllocEx(explorer, NULL, sizeof(TCHAR) * (MAX_PATH + 1), MEM_COMMIT, PAGE_READWRITE));
+    remoteText = static_cast<LPTSTR>(VirtualAllocEx(explorer, NULL, sizeof(TCHAR) * (MAX_PATH + 1), MEM_COMMIT, PAGE_READWRITE));
 }
 
 int IconManager::GetIconCount() {
@@ -48,7 +48,7 @@ bool IconManager::GetIconInfo(int index, IconManager::IconInfo& info) {
     return true;
 }
 
-bool IconManager::Export(const TCHAR* filePath) {
+bool IconManager::Export(const LPTSTR filePath) {
     IconManager::IconInfo info{};
     TCHAR buffer[_MAX_U64TOSTR_BASE10_COUNT]{};
 
@@ -72,7 +72,7 @@ bool IconManager::Export(const TCHAR* filePath) {
     return success;
 }
 
-bool IconManager::Import(const TCHAR* filePath, IProgressDialog* progress, int offsetX, int offsetY, bool alignAfter) {
+bool IconManager::Import(const LPTSTR filePath, IProgressDialog* progress, int offsetX, int offsetY, bool alignAfter) {
     const auto total = GetIconCount();
     const auto style = ListView_GetExtendedListViewStyle(listView);
 
@@ -82,7 +82,7 @@ bool IconManager::Import(const TCHAR* filePath, IProgressDialog* progress, int o
     IconManager::IconInfo info{};
     for (int i = 0; i < total; ++i)
     {
-        if (!GetIconInfo(i, info) || info.text == NULL) {
+        if (!GetIconInfo(i, info)) {
             continue;
         }
 
