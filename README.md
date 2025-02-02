@@ -13,6 +13,27 @@ While restoring, the snap to grid feature is temporarily disabled to better move
 
 The latest version can be taken directly from the build pipeline artifacts.
 
+## CLI usage
+
+The latest version now supports command line arguments for usage without the GUI.
+Offset and align arguments are only supported when loading a file.
+
+```bash
+$ ./PersistentDesktopIcons.exe <save|load> [offset-x] [offset-y] [align]
+```
+
+Example how to load a file with offset and with aligning:
+
+```bash
+$ ./PersistentDesktopIcons.exe load "./test.desktop" 100 200 1
+```
+
+Example how to save current desktop to a file:
+
+```bash
+$ ./PersistentDesktopIcons.exe save "./test.desktop"
+```
+
 ## How it works
 
 The icons on the desktop are implemented as a [ListView](https://learn.microsoft.com/en-us/windows/win32/controls/list-view-controls-overview) (specifically icon view) control component.
